@@ -1,14 +1,12 @@
 # Run 'pip install pycryptodome' in the terminal if Crypto isn't recognized.
 import tkinter as tk
+import os
+from stat import S_IREAD, S_IRGRP, S_IROTH
 from tkinter import filedialog, messagebox
-from secrets import randbelow
+from base64 import b64encode, b64decode
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
-
-characters = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
-              'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
-              '0','1','2','3','4','5','6','7','8','9','!','@','#','$','%','^','&','*','(',')','[',']','{','}',':',';',
-              ',','.','<','>','/','+','-','*','_','=','`','~','?']
+from Crypto.Random import get_random_bytes
 
 def aes_encryption():
     try:
@@ -18,21 +16,19 @@ def aes_encryption():
     except FileNotFoundError:
         messagebox.showerror("Error", "No file selected!")
     else:
-        key = ''
-        iv = ''  
-        for _ in range(32):
-            key += characters[randbelow(len(characters))] # 256-bit secret key
-        for _ in range(16):
-            iv += characters[randbelow(len(characters))] # 128-bit initialization vector
+        key = get_random_bytes(32) # 256-bit secret key
+        iv = get_random_bytes(16) # 128-bit initialization vector
+        key_iv = {'key': key, 'iv': iv}
         input_file = file_label.cget("text")  # input file
         input_file = input_file[15:]
         output_file = input_file + '.encrypted'  # encrypted output file
-        with open(input_file + '_key_iv.txt', 'w') as file:
-            file.write("Keep this file with the key and initialization vector to decrypt:\n")
-            file.write(f'{key}\n')
-            file.write(iv)
+        with open(input_file + '_key_iv.txt', 'wb') as file:
+            file.write(b"Keep this file with the key and initialization vector to decrypt:\n")
+            file.write(key_iv['key'] + b'\n')
+            file.write(key_iv['iv'] + b'\n')
+            os.chmod(input_file + '_key_iv.txt', S_IREAD|S_IRGRP|S_IROTH)
         # initialize the AES cipher with CBC mode and the given key and IV
-        cipher = AES.new(key.encode('utf-8'), AES.MODE_CBC, iv.encode('utf-8'))
+        cipher = AES.new(key, AES.MODE_CBC, iv)
         # pad the file data to the AES block size
         padded_file_data = pad(file_data, AES.block_size)
         # encrypt the padded file data
@@ -55,10 +51,11 @@ def aes_decryption():
         if ".encrypted" in input_file[-10:]:
             output_file = input_file[0:-10]  # decrypted output file
             try:
-                with open(output_file + '_key_iv.txt', 'r') as file:
-                    file.readline().strip('\n')
-                    key = file.readline().strip('\n').encode('utf-8')
-                    iv = file.readline().strip('\n').encode('utf-8')
+                with open(output_file + '_key_iv.txt', 'rb') as file:
+                    file.readline()
+                    key_iv = {'key': file.read(33)[:-1], 'iv': file.read(17)[:-1]}
+                    key = key_iv['key']
+                    iv = key_iv['iv']
             except FileNotFoundError:
                 messagebox.showerror("Error", "File containing key and initialization vector not found!")
             else:
