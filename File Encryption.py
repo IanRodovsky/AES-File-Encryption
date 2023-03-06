@@ -3,7 +3,6 @@ import tkinter as tk
 import os
 from stat import S_IREAD, S_IRGRP, S_IROTH
 from tkinter import filedialog, messagebox
-from base64 import b64encode, b64decode
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 from Crypto.Random import get_random_bytes
@@ -18,14 +17,13 @@ def aes_encryption():
     else:
         key = get_random_bytes(32) # 256-bit secret key
         iv = get_random_bytes(16) # 128-bit initialization vector
-        key_iv = {'key': key, 'iv': iv}
         input_file = file_label.cget("text")  # input file
         input_file = input_file[15:]
         output_file = input_file + '.encrypted'  # encrypted output file
         with open(input_file + '_key_iv.txt', 'wb') as file:
             file.write(b"Keep this file with the key and initialization vector to decrypt:\n")
-            file.write(key_iv['key'] + b'\n')
-            file.write(key_iv['iv'] + b'\n')
+            file.write(key + b'\n')
+            file.write(iv + b'\n')
             os.chmod(input_file + '_key_iv.txt', S_IREAD|S_IRGRP|S_IROTH)
         # initialize the AES cipher with CBC mode and the given key and IV
         cipher = AES.new(key, AES.MODE_CBC, iv)
