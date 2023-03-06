@@ -59,7 +59,7 @@ def aes_decryption():
                     file.readline().strip('\n')
                     key = file.readline().strip('\n').encode('utf-8')
                     iv = file.readline().strip('\n').encode('utf-8')
-            except:
+            except FileNotFoundError:
                 messagebox.showerror("Error", "File containing key and initialization vector not found!")
             else:
                 # initialize the AES cipher with CBC mode and the given key and IV
