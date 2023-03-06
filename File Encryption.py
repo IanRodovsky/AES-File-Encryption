@@ -7,6 +7,7 @@ from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 from Crypto.Random import get_random_bytes
 
+
 def aes_encryption():
     try:
         # read in the contents of the input file as binary data
@@ -70,6 +71,7 @@ def aes_decryption():
                         file.write(decrypted_data)
         else:
             messagebox.showerror('Error', 'Selected file is not encrypted!')
+
 
 def select_file():
     # create a file dialog and wait for the user to select a file
