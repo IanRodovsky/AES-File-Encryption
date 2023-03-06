@@ -54,17 +54,21 @@ def aes_decryption():
         input_file = input_file[15:]
         if ".encrypted" in input_file[-10:]:
             output_file = input_file[0:-10]  # decrypted output file
-            with open(output_file + '_key_iv.txt', 'r') as file:
-                file.readline().strip('\n')
-                key = file.readline().strip('\n').encode('utf-8')
-                iv = file.readline().strip('\n').encode('utf-8')
-            # initialize the AES cipher with CBC mode and the given key and IV
-            cipher = AES.new(key, AES.MODE_CBC, iv)
-            # decrypt the encrypted data and unpad the result
-            decrypted_data = unpad(cipher.decrypt(encrypted_data), AES.block_size)
-            # write the decrypted data to the output file
-            with open(output_file, 'wb') as file:
-                file.write(decrypted_data)
+            try:
+                with open(output_file + '_key_iv.txt', 'r') as file:
+                    file.readline().strip('\n')
+                    key = file.readline().strip('\n').encode('utf-8')
+                    iv = file.readline().strip('\n').encode('utf-8')
+            except:
+                messagebox.showerror("Error", "File containing key and initialization vector not found!")
+            else:
+                # initialize the AES cipher with CBC mode and the given key and IV
+                cipher = AES.new(key, AES.MODE_CBC, iv)
+                # decrypt the encrypted data and unpad the result
+                decrypted_data = unpad(cipher.decrypt(encrypted_data), AES.block_size)
+                # write the decrypted data to the output file
+                with open(output_file, 'wb') as file:
+                    file.write(decrypted_data)
         else:
             messagebox.showerror('Error', 'Selected file is not encrypted!')
 
