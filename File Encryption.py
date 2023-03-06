@@ -52,9 +52,8 @@ def aes_decryption():
             try:
                 with open(output_file + '_key_iv.txt', 'rb') as file:
                     file.readline()
-                    key_iv = {'key': file.read(33)[:-1], 'iv': file.read(17)[:-1]}
-                    key = key_iv['key']
-                    iv = key_iv['iv']
+                    key = file.read(33)[:-1]
+                    iv = file.read(17)[:-1]
             except FileNotFoundError:
                 messagebox.showerror("Error", "File containing key and initialization vector not found!")
             else:
