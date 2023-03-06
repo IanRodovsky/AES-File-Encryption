@@ -62,13 +62,17 @@ def aes_decryption():
             except FileNotFoundError:
                 messagebox.showerror("Error", "File containing key and initialization vector not found!")
             else:
-                # initialize the AES cipher with CBC mode and the given key and IV
-                cipher = AES.new(key, AES.MODE_CBC, iv)
-                # decrypt the encrypted data and unpad the result
-                decrypted_data = unpad(cipher.decrypt(encrypted_data), AES.block_size)
-                # write the decrypted data to the output file
-                with open(output_file, 'wb') as file:
-                    file.write(decrypted_data)
+                try:
+                    # initialize the AES cipher with CBC mode and the given key and IV
+                    cipher = AES.new(key, AES.MODE_CBC, iv)
+                except ValueError:
+                    messagebox.showerror("Error", "Key and/or initialization vector not valid!")
+                else:
+                    # decrypt the encrypted data and unpad the result
+                    decrypted_data = unpad(cipher.decrypt(encrypted_data), AES.block_size)
+                    # write the decrypted data to the output file
+                    with open(output_file, 'wb') as file:
+                        file.write(decrypted_data)
         else:
             messagebox.showerror('Error', 'Selected file is not encrypted!')
 
