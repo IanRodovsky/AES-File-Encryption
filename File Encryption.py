@@ -4,7 +4,6 @@ import os
 from stat import S_IREAD, S_IRGRP, S_IROTH
 from tkinter import filedialog, messagebox
 from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad, unpad
 from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Hash import SHA256
 from Crypto.Random import get_random_bytes
@@ -19,31 +18,29 @@ def aes_encryption():
         messagebox.showerror("Error", "No file selected!")
     else:
         master_key = 'NA2rDisnDIV@mXth6Vp#Uc3OYa1Y0*faccac7KL!iWkovyil' #384-bit master key
+        nonce_size = 11 # 88-bit nonce_size
         salt_size = 32 # 256-bit salt_size
         key_size = 32  # 256-bit key_size
-        iv_size = 16 # 128-bit iv_size
         salt = get_random_bytes(salt_size) # # 256-bit salt
         # Derive a new key from the password and salt using PBKDF2 with SHA256
         key = PBKDF2(master_key, salt, key_size, count=1000000, hmac_hash_module=SHA256) # 256-bit key
-        iv = get_random_bytes(iv_size) # 128-bit initialization vector
+        nonce = get_random_bytes(nonce_size) # 88-bit nonce
         input_file = file_label.cget("text")  # input file
-        print(input_file)
         input_file = input_file[15:]
         output_file = input_file + '.encrypted'  # encrypted output file
-        with open(input_file + '_salt_iv.txt', 'wb') as file:
-            file.write(b"Keep this file with the salt and initialization vector to decrypt:\n")
-            file.write(salt + b'\n')
-            file.write(iv + b'\n')
-            os.chmod(input_file + '_salt_iv.txt', S_IREAD|S_IRGRP|S_IROTH)
-        # initialize the AES cipher with CBC mode and the given key and IV
-        cipher = AES.new(key, AES.MODE_CBC, iv)
-        # pad the file data to the AES block size
-        padded_file_data = pad(file_data, AES.block_size)
+        # initialize the AES cipher with CCM mode and the given key and nonce
+        cipher = AES.new(key, AES.MODE_CCM, nonce=nonce, mac_len=16)
         # encrypt the padded file data
-        encrypted_data = cipher.encrypt(padded_file_data)
+        encrypted_data, auth_tag = cipher.encrypt_and_digest(file_data)
         # write the encrypted data to the output file
         with open(output_file, 'wb') as file:
             file.write(encrypted_data)
+        with open(input_file + '_salt_nonce.txt', 'wb') as file:
+            file.write(b"Keep this file with the salt, nonce, and authentication tag to decrypt:\n")
+            file.write(salt + b'\n')
+            file.write(nonce + b'\n')
+            file.write(auth_tag + b'\n')
+            os.chmod(input_file + '_salt_nonce.txt', S_IREAD|S_IRGRP|S_IROTH)
 
 
 def aes_decryption():
@@ -59,27 +56,32 @@ def aes_decryption():
         if ".encrypted" in input_file[-10:]:
             output_file = input_file[0:-10]  # decrypted output file
             try:
-                with open(output_file + '_salt_iv.txt', 'rb') as file:
+                with open(output_file + '_salt_nonce.txt', 'rb') as file:
                     file.readline()
                     salt = file.read(33)[:-1]
-                    iv = file.read(17)[:-1]
+                    nonce = file.read(12)[:-1]
+                    auth_tag = file.read(17)[:-1]
             except FileNotFoundError:
-                messagebox.showerror("Error", "File containing salt and initialization vector not found!")
+                messagebox.showerror("Error", "File containing salt and nonce not found!")
             else:
                 master_key = 'NA2rDisnDIV@mXth6Vp#Uc3OYa1Y0*faccac7KL!iWkovyil'
                 key_size = 32
                 key = PBKDF2(master_key, salt, key_size, count=1000000, hmac_hash_module=SHA256)
                 try:
-                    # initialize the AES cipher with CBC mode and the given key and IV
-                    cipher = AES.new(key, AES.MODE_CBC, iv)
+                    # initialize the AES cipher with CCM mode and the given key and IV
+                    cipher = AES.new(key, AES.MODE_CCM, nonce, mac_len=16)
                 except ValueError:
-                    messagebox.showerror("Error", "Key and/or initialization vector not valid!")
+                    messagebox.showerror("Error", "Key and/or nonce not valid!")
                 else:
-                    # decrypt the encrypted data and unpad the result
-                    decrypted_data = unpad(cipher.decrypt(encrypted_data), AES.block_size)
-                    # write the decrypted data to the output file
-                    with open(output_file, 'wb') as file:
-                        file.write(decrypted_data)
+                    # decrypt the encrypted data and verify the result
+                    try:
+                        decrypted_data = cipher.decrypt_and_verify(encrypted_data, auth_tag)
+                    except ValueError:
+                        messagebox.showerror("Error", "Failed to verify data!")
+                    else:
+                        # write the decrypted data to the output file
+                        with open(output_file, 'wb') as file:
+                            file.write(decrypted_data)
         else:
             messagebox.showerror('Error', 'Selected file is not encrypted!')
 
