@@ -19,12 +19,12 @@ def aes_encryption():
         messagebox.showerror("Error", "No file selected!")
     else:
         master_key = 'NA2rDisnDIV@mXth6Vp#Uc3OYa1Y0*faccac7KL!iWkovyil' #384-bit master key
-        salt_size = 32 # 256-bit salt
-        key_size = 32  # 256-bit key
-        iv_size = 16 # 128-bit key
-        salt = get_random_bytes(salt_size)
+        salt_size = 32 # 256-bit salt_size
+        key_size = 32  # 256-bit key_size
+        iv_size = 16 # 128-bit iv_size
+        salt = get_random_bytes(salt_size) # # 256-bit salt
         # Derive a new key from the password and salt using PBKDF2 with SHA256
-        key = PBKDF2(master_key, salt, key_size, count=1000000, hmac_hash_module=SHA256)
+        key = PBKDF2(master_key, salt, key_size, count=1000000, hmac_hash_module=SHA256) # 256-bit key
         iv = get_random_bytes(iv_size) # 128-bit initialization vector
         input_file = file_label.cget("text")  # input file
         input_file = input_file[15:]
