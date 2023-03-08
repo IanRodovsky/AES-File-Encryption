@@ -1,7 +1,6 @@
 # Run 'pip install pycryptodome' in the terminal if Crypto isn't recognized.
 import tkinter as tk
 import os
-from base64 import b64encode, b64decode
 from stat import S_IREAD, S_IRGRP, S_IROTH
 from tkinter import filedialog, messagebox
 from Crypto.Cipher import AES
