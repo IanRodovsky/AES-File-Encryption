@@ -1,6 +1,7 @@
 # Run 'pip install pycryptodome' in the terminal if Crypto isn't recognized.
 import tkinter as tk
 import os
+from base64 import b64encode, b64decode
 from stat import S_IREAD, S_IRGRP, S_IROTH
 from tkinter import filedialog, messagebox
 from Crypto.Cipher import AES
@@ -27,6 +28,7 @@ def aes_encryption():
         key = PBKDF2(master_key, salt, key_size, count=1000000, hmac_hash_module=SHA256) # 256-bit key
         iv = get_random_bytes(iv_size) # 128-bit initialization vector
         input_file = file_label.cget("text")  # input file
+        print(input_file)
         input_file = input_file[15:]
         output_file = input_file + '.encrypted'  # encrypted output file
         with open(input_file + '_salt_iv.txt', 'wb') as file:
@@ -63,7 +65,7 @@ def aes_decryption():
                     salt = file.read(33)[:-1]
                     iv = file.read(17)[:-1]
             except FileNotFoundError:
-                messagebox.showerror("Error", "File containing key and initialization vector not found!")
+                messagebox.showerror("Error", "File containing salt and initialization vector not found!")
             else:
                 master_key = 'NA2rDisnDIV@mXth6Vp#Uc3OYa1Y0*faccac7KL!iWkovyil'
                 key_size = 32
@@ -94,7 +96,6 @@ def select_file():
         file_label.configure(text="File Selected: " + file_name)
     else:
         messagebox.showerror("Error", "No file selected!")
-
 
 if __name__ == '__main__':
     # create the main window
