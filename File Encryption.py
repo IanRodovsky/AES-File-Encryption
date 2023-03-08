@@ -5,6 +5,8 @@ from stat import S_IREAD, S_IRGRP, S_IROTH
 from tkinter import filedialog, messagebox
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
+from Crypto.Protocol.KDF import PBKDF2
+from Crypto.Hash import SHA256
 from Crypto.Random import get_random_bytes
 
 
@@ -16,16 +18,22 @@ def aes_encryption():
     except FileNotFoundError:
         messagebox.showerror("Error", "No file selected!")
     else:
-        key = get_random_bytes(32) # 256-bit secret key
-        iv = get_random_bytes(16) # 128-bit initialization vector
+        master_key = 'NA2rDisnDIV@mXth6Vp#Uc3OYa1Y0*faccac7KL!iWkovyil' #384-bit master key
+        salt_size = 32 # 256-bit salt
+        key_size = 32  # 256-bit key
+        iv_size = 16 # 128-bit key
+        salt = get_random_bytes(salt_size)
+        # Derive a new key from the password and salt using PBKDF2 with SHA256
+        key = PBKDF2(master_key, salt, key_size, count=1000000, hmac_hash_module=SHA256)
+        iv = get_random_bytes(iv_size) # 128-bit initialization vector
         input_file = file_label.cget("text")  # input file
         input_file = input_file[15:]
         output_file = input_file + '.encrypted'  # encrypted output file
-        with open(input_file + '_key_iv.txt', 'wb') as file:
-            file.write(b"Keep this file with the key and initialization vector to decrypt:\n")
-            file.write(key + b'\n')
+        with open(input_file + '_salt_iv.txt', 'wb') as file:
+            file.write(b"Keep this file with the salt and initialization vector to decrypt:\n")
+            file.write(salt + b'\n')
             file.write(iv + b'\n')
-            os.chmod(input_file + '_key_iv.txt', S_IREAD|S_IRGRP|S_IROTH)
+            os.chmod(input_file + '_salt_iv.txt', S_IREAD|S_IRGRP|S_IROTH)
         # initialize the AES cipher with CBC mode and the given key and IV
         cipher = AES.new(key, AES.MODE_CBC, iv)
         # pad the file data to the AES block size
@@ -50,13 +58,16 @@ def aes_decryption():
         if ".encrypted" in input_file[-10:]:
             output_file = input_file[0:-10]  # decrypted output file
             try:
-                with open(output_file + '_key_iv.txt', 'rb') as file:
+                with open(output_file + '_salt_iv.txt', 'rb') as file:
                     file.readline()
-                    key = file.read(33)[:-1]
+                    salt = file.read(33)[:-1]
                     iv = file.read(17)[:-1]
             except FileNotFoundError:
                 messagebox.showerror("Error", "File containing key and initialization vector not found!")
             else:
+                master_key = 'NA2rDisnDIV@mXth6Vp#Uc3OYa1Y0*faccac7KL!iWkovyil'
+                key_size = 32
+                key = PBKDF2(master_key, salt, key_size, count=1000000, hmac_hash_module=SHA256)
                 try:
                     # initialize the AES cipher with CBC mode and the given key and IV
                     cipher = AES.new(key, AES.MODE_CBC, iv)
