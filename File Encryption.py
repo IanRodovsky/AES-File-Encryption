@@ -1,7 +1,5 @@
 # Run 'pip install pycryptodome' in the terminal if Crypto isn't recognized.
 import tkinter as tk
-import os
-from stat import S_IREAD, S_IRGRP, S_IROTH
 from tkinter import filedialog, messagebox
 from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import PBKDF2
@@ -32,56 +30,49 @@ def aes_encryption():
         cipher = AES.new(key, AES.MODE_CCM, nonce=nonce, mac_len=16)
         # encrypt the padded file data
         encrypted_data, auth_tag = cipher.encrypt_and_digest(file_data)
-        # write the encrypted data to the output file
+        # write the encrypted data, salt, nonce, and authentication tag to the output file
         with open(output_file, 'wb') as file:
             file.write(encrypted_data)
-        with open(input_file + '_salt_nonce.txt', 'wb') as file:
-            file.write(b"Keep this file with the salt, nonce, and authentication tag to decrypt:\n")
-            file.write(salt + b'\n')
-            file.write(nonce + b'\n')
-            file.write(auth_tag + b'\n')
-            os.chmod(input_file + '_salt_nonce.txt', S_IREAD|S_IRGRP|S_IROTH)
+            file.write(salt)
+            file.write(nonce)
+            file.write(auth_tag)
 
 
 def aes_decryption():
     try:
         # read in the encrypted data from the input file
         with open(path_label.cget("text"), 'rb') as file:
-            encrypted_data = file.read()
+            encrypted_data_whole = file.read()
     except:
         messagebox.showerror("Error", "No file selected!")
     else:
         input_file = file_label.cget("text")  # input file
         input_file = input_file[15:]
         if ".encrypted" in input_file[-10:]:
-            output_file = input_file[0:-10]  # decrypted output file
+            output_file = input_file[0:-10]  # create output file name
+            salt_nonce_auth = encrypted_data_whole[-59:] # pull salt, nonce, and authentication tag from the end of file.
+            salt = salt_nonce_auth[:-27] # pull salt
+            nonce = salt_nonce_auth[-27:-16] # pull nonce
+            auth_tag = salt_nonce_auth[-16:] # pull authentication tag
+            encrypted_data = encrypted_data_whole[:-59] # pull original encrypted file
+            master_key = 'NA2rDisnDIV@mXth6Vp#Uc3OYa1Y0*faccac7KL!iWkovyil'
+            key_size = 32
+            key = PBKDF2(master_key, salt, key_size, count=1000000, hmac_hash_module=SHA256)
             try:
-                with open(output_file + '_salt_nonce.txt', 'rb') as file:
-                    file.readline()
-                    salt = file.read(33)[:-1]
-                    nonce = file.read(12)[:-1]
-                    auth_tag = file.read(17)[:-1]
-            except FileNotFoundError:
-                messagebox.showerror("Error", "File containing salt and nonce not found!")
+                # initialize the AES cipher with CCM mode and the given key and IV
+                cipher = AES.new(key, AES.MODE_CCM, nonce, mac_len=16)
+            except ValueError:
+                messagebox.showerror("Error", "Key and/or nonce not valid!")
             else:
-                master_key = 'NA2rDisnDIV@mXth6Vp#Uc3OYa1Y0*faccac7KL!iWkovyil'
-                key_size = 32
-                key = PBKDF2(master_key, salt, key_size, count=1000000, hmac_hash_module=SHA256)
+                # decrypt the encrypted data and unpad the result
                 try:
-                    # initialize the AES cipher with CCM mode and the given key and IV
-                    cipher = AES.new(key, AES.MODE_CCM, nonce, mac_len=16)
+                    decrypted_data = cipher.decrypt_and_verify(encrypted_data, auth_tag)
                 except ValueError:
-                    messagebox.showerror("Error", "Key and/or nonce not valid!")
+                    messagebox.showerror("Error", "Failed to verify data!")
                 else:
-                    # decrypt the encrypted data and verify the result
-                    try:
-                        decrypted_data = cipher.decrypt_and_verify(encrypted_data, auth_tag)
-                    except ValueError:
-                        messagebox.showerror("Error", "Failed to verify data!")
-                    else:
-                        # write the decrypted data to the output file
-                        with open(output_file, 'wb') as file:
-                            file.write(decrypted_data)
+                    # write the decrypted data to the output file
+                    with open(output_file, 'wb') as file:
+                        file.write(decrypted_data)
         else:
             messagebox.showerror('Error', 'Selected file is not encrypted!')
 
